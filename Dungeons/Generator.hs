@@ -1,4 +1,3 @@
-{-# LANGUAGE BangPatterns #-}
 module Dungeons.Generator where
 import Control.Monad (guard, replicateM)
 import Data.List (sortBy)
