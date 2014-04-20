@@ -3,14 +3,11 @@ import Control.Monad (guard, replicateM)
 import Data.Monoid (mconcat)
 import System.Random (randomRIO)
 import Graphics.Gloss (Picture(Translate), rectangleWire, display, Display(InWindow), white)
--- Points are located as is standard for computer visuals libraries like OpenGL
--- Topleft is (0, 0), all coordinates are positive, x and y are left-right and up-down 
--- dimensions. 
 
 data Location = Location { x :: Int, y :: Int } deriving (Show, Eq)
 
 data Room = Room { 
-      topleft :: Location,
+      bottomleft :: Location,
       width :: Int,
       height :: Int
     } deriving (Show, Eq)
@@ -22,6 +19,20 @@ vdiff (Location x1 y1) (Location x2 y2) = Vector (x1 - x2) (y1 - y2)
 
 vinverse :: Vector -> Vector
 vinverse (Vector x y) = Vector (-x) (-y)
+
+topright :: Room -> Location
+topright (Room (Location x y) width height) = Location (x + width) (y + height)
+
+overlapping :: (Int, Int) -> (Int, Int) -> Bool
+overlapping (a, b) (c, d) = (a <= c && c <= b) || (a <= d && d <= b)
+
+roomOverlap :: Room -> Room -> Bool
+roomOverlap r1 r2 = overlapping (minx1, maxx1) (minx2, maxx2) && 
+                    overlapping (miny1, maxy1) (miny2, maxy2)
+    where Location minx1 miny1 = bottomleft r1
+          Location minx2 miny2 = bottomleft r2
+          Location maxx1 maxy1 = topright r1
+          Location maxx2 maxy2 = topright r2
 
 center :: Room -> Location
 center (Room (Location x y) width height) = Location (x + width `div` 2) (y + height `div` 2)
