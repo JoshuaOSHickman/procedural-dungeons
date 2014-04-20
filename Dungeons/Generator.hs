@@ -100,11 +100,14 @@ nextKruskal connections madeConnections = (r1, r2)
           third (a, b, c) = c
           notBothConnected (r1, r2, _) = not $ connected madeConnections r1 r2
 
-kruskal :: (Eq a, Show a) => [a] -> (a -> a -> Float) -> [(a, a)]
+kruskal :: (Eq a) => [a] -> (a -> a -> Float) -> [(a, a)]
 kruskal nodes distance = iterate grabNew [] !! (length nodes - 1)
     where grabNew madeConnections = nextKruskal possibleConnections madeConnections : madeConnections
           possibleConnections = allConnections nodes distance
 
+corridors :: [Room] -> [(Room, Room)]
+corridors rooms = kruskal rooms rdistance
+    where rdistance r1 r2 = vmag $ vdiff (center r1) (center r2)
 
 randomLocation :: (Float, Float) -> (Float, Float) -> IO Location
 randomLocation xbounds ybounds = do
