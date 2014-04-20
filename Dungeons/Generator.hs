@@ -1,8 +1,11 @@
 {-# LANGUAGE BangPatterns #-}
 module Dungeons.Generator where
 import Control.Monad (guard, replicateM)
+import Data.List (sortBy)
+import Data.Function (on)
 import Data.Monoid (mconcat)
 import System.Random (randomRIO)
+
 import Graphics.Gloss (Picture(Translate), rectangleWire, display, Display(InWindow), white)
 
 data Location = Location { x :: !Float, y :: !Float } deriving (Show, Eq)
@@ -22,8 +25,10 @@ vinverse :: Vector -> Vector
 vinverse (Vector x y) = Vector (-x) (-y)
 
 vnorm :: Vector -> Vector
-vnorm (Vector x y) = Vector (x / l) (y / l)
-    where l = sqrt (x * x + y * y)
+vnorm v@(Vector x y) = Vector (x / l) (y / l) where l = vmag v
+
+vmag :: Vector -> Float
+vmag (Vector x y) = sqrt (x * x + y * y)
 
 topright :: Room -> Location
 topright (Room (Location x y) width height) = Location (x + width) (y + height)
@@ -76,6 +81,34 @@ bufferAllRooms n rooms = if intersectingPairs == []
     where intersectingPairs = filter (uncurry $ roomCloserThanN n) (pairs rooms)
           newRooms movingRoom = others ++ [moveNAway n movingRoom others]
               where others = filter (/= movingRoom) rooms
+
+allConnections :: [a] -> (a -> a -> Float) -> [(a, a, Float)]
+allConnections nodes distance = map addDistance (pairs nodes)
+    where addDistance (r1, r2) = (r1, r2, distance r1 r2)
+
+connected :: (Eq a) => [(a, a)] -> a -> a -> Bool
+connected connections start end = withKnownConnections [start]
+    where withKnownConnections connectedNodes = end `elem` connectedNodes || 
+                                                (not (null newConnections) && 
+                                                     withKnownConnections 
+                                                     (connectedNodes ++ newConnections))
+              where newConnectionsFrom i = (map fst . filter ((== i) . snd) $ connections) ++
+                                           (map snd . filter ((== i) . fst) $ connections)
+                    newConnections = filter (flip notElem connectedNodes) . 
+                                     concatMap newConnectionsFrom $ connectedNodes
+
+nextKruskal :: (Eq a) => [(a, a, Float)] -> [(a, a)] -> (a, a)
+nextKruskal connections madeConnections = (r1, r2)
+    where (r1, r2, distance) = head options
+          options = sortBy (compare `on` third) . filter notBothConnected $ connections
+          third (a, b, c) = c
+          notBothConnected (r1, r2, _) = not $ connected madeConnections r1 r2
+
+kruskal :: (Eq a, Show a) => [a] -> (a -> a -> Float) -> [(a, a)]
+kruskal nodes distance = iterate grabNew [] !! (length nodes - 1)
+    where grabNew madeConnections = (nextKruskal possibleConnections madeConnections):madeConnections
+          possibleConnections = allConnections nodes distance
+
 
 randomLocation :: (Float, Float) -> (Float, Float) -> IO Location
 randomLocation xbounds ybounds = do
