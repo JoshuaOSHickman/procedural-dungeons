@@ -3,10 +3,7 @@ module Dungeons.Generator where
 import Control.Monad (guard, replicateM)
 import Data.List (sortBy)
 import Data.Function (on)
-import Data.Monoid (mconcat)
 import System.Random (randomRIO)
-
-import Graphics.Gloss (Picture(Translate), rectangleWire, display, Display(InWindow), white)
 
 data Location = Location { x :: !Float, y :: !Float } deriving (Show, Eq)
 
@@ -123,16 +120,5 @@ randomRoom (minX, maxX) (minY, maxY) widthbounds heightbounds = do
   location <- randomLocation (minX, maxX - width) (minY, maxY - height)
   return $ Room location width height
 
-renderRoom :: Room -> Picture
-renderRoom (Room (Location x y) width height) = 
-    Translate x y $ rectangleWire width height
-
 randomRooms :: IO [Room]
 randomRooms = replicateM 14 $ randomRoom (-10, 10) (-10, 10) (15, 20) (15, 20)
-
-main :: IO ()
-main = do
-  rooms <- randomRooms
-  let newRooms = bufferAllRooms 5 rooms
-  display (InWindow "Rooms" (400, 400) (10, 10)) white
-              . mconcat . map renderRoom $ newRooms
