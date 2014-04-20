@@ -32,9 +32,12 @@ overlapping :: (Float, Float) -> (Float, Float) -> Bool
 overlapping (a, b) (c, d) = (a <= c && c <= b) || (a <= d && d <= b) ||
                             (c <= a && a <= d) || (c <= b && b <= d)
 
-roomOverlap :: Room -> Room -> Bool
-roomOverlap r1 r2 = overlapping (minx1, maxx1) (minx2, maxx2) && 
-                    overlapping (miny1, maxy1) (miny2, maxy2)
+atLeastNAway :: Float -> (Float, Float) -> (Float, Float) -> Bool
+atLeastNAway n (a, b) (c, d) = overlapping (a - n, b + n) (c, d)
+
+roomCloserThanN :: Float -> Room -> Room -> Bool
+roomCloserThanN n r1 r2 = atLeastNAway n (minx1, maxx1) (minx2, maxx2) && 
+                          atLeastNAway n (miny1, maxy1) (miny2, maxy2)
     where Location minx1 miny1 = bottomleft r1
           Location minx2 miny2 = bottomleft r2
           Location maxx1 maxy1 = topright r1
@@ -54,25 +57,24 @@ moveRoom :: Room -> Vector -> Room
 moveRoom (Room (Location x y) width height) (Vector dx dy) =
     Room (Location (x + dx) (y + dy)) width height
 
-moveAway :: Room -> [Room] -> Room
-moveAway room otherRooms = if any (roomOverlap room) otherRooms
-                           then moveAway (moveRoom room direction) otherRooms
-                           else room
+moveNAway :: Float -> Room -> [Room] -> Room
+moveNAway n room otherRooms = if any (roomCloserThanN n room) otherRooms
+                              then moveNAway n (moveRoom room direction) otherRooms
+                              else room
     where otherCenter = combinedCenter otherRooms
           c = center room
           direction = vnorm $ vdiff c otherCenter
 
--- todo add spacing
 pairs :: [a] -> [(a, a)]
 pairs [] = []
 pairs (x:xs) = map ((,) x) xs ++ pairs xs
 
-seperateAllRooms :: [Room] -> [Room]
-seperateAllRooms rooms = if intersectingPairs == []
+bufferAllRooms :: Float -> [Room] -> [Room]
+bufferAllRooms n rooms = if intersectingPairs == []
                          then rooms
-                         else seperateAllRooms (newRooms (fst (head intersectingPairs)))
-    where intersectingPairs = filter (uncurry roomOverlap) (pairs rooms)
-          newRooms movingRoom = others ++ [moveAway movingRoom others]
+                         else bufferAllRooms n (newRooms (fst (head intersectingPairs)))
+    where intersectingPairs = filter (uncurry $ roomCloserThanN n) (pairs rooms)
+          newRooms movingRoom = others ++ [moveNAway n movingRoom others]
               where others = filter (/= movingRoom) rooms
 
 randomLocation :: (Float, Float) -> (Float, Float) -> IO Location
@@ -98,6 +100,6 @@ randomRooms = replicateM 14 $ randomRoom (-10, 10) (-10, 10) (15, 20) (15, 20)
 main :: IO ()
 main = do
   rooms <- randomRooms
-  let newRooms = seperateAllRooms rooms
+  let newRooms = bufferAllRooms 5 rooms
   display (InWindow "Rooms" (400, 400) (10, 10)) white
               . mconcat . map renderRoom $ newRooms
