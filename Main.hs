@@ -16,11 +16,18 @@ renderCorridor (room1, room2) = Line [(x, y), (x2, y2)] -- non-manhattan
     where Location x y = center room1
           Location x2 y2 = center room2
 
+renderCorridorManhattan :: (Room, Room) -> Picture
+renderCorridorManhattan (room1, room2) = mappend horizontalLine verticalLine
+    where Location x1 y1 = center room1
+          Location x2 y2 = center room2
+          horizontalLine = Line [(x1, y1), (x2, y1)] -- see, no change in y
+          verticalLine = Line [(x2, y1), (x2, y2)] -- I'm thinking I could make this one array?
+
 main :: IO ()
 main = do
   rooms <- randomRooms
   let newRooms = bufferAllRooms 5 rooms
       roomsPic = mconcat (map renderRoom newRooms)
-      corridorsPic = mconcat (map renderCorridor (corridors newRooms))
+      corridorsPic = mconcat (map renderCorridorManhattan (corridors newRooms))
       picture = mappend roomsPic corridorsPic
   display (InWindow "Rooms" (400, 400) (10, 10)) white picture
