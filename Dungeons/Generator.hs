@@ -71,7 +71,7 @@ pairs [] = []
 pairs (x:xs) = map ((,) x) xs ++ pairs xs
 
 bufferAllRooms :: Float -> [Room] -> [Room]
-bufferAllRooms n rooms = if intersectingPairs == []
+bufferAllRooms n rooms = if null intersectingPairs
                          then rooms
                          else bufferAllRooms n (newRooms (fst (head intersectingPairs)))
     where intersectingPairs = filter (uncurry $ roomCloserThanN n) (pairs rooms)
@@ -90,7 +90,7 @@ connected connections start end = withKnownConnections [start]
                                                      (connectedNodes ++ newConnections))
               where newConnectionsFrom i = (map fst . filter ((== i) . snd) $ connections) ++
                                            (map snd . filter ((== i) . fst) $ connections)
-                    newConnections = filter (flip notElem connectedNodes) . 
+                    newConnections = filter (`notElem` connectedNodes) . 
                                      concatMap newConnectionsFrom $ connectedNodes
 
 nextKruskal :: (Eq a) => [(a, a, Float)] -> [(a, a)] -> (a, a)
@@ -102,7 +102,7 @@ nextKruskal connections madeConnections = (r1, r2)
 
 kruskal :: (Eq a, Show a) => [a] -> (a -> a -> Float) -> [(a, a)]
 kruskal nodes distance = iterate grabNew [] !! (length nodes - 1)
-    where grabNew madeConnections = (nextKruskal possibleConnections madeConnections):madeConnections
+    where grabNew madeConnections = nextKruskal possibleConnections madeConnections : madeConnections
           possibleConnections = allConnections nodes distance
 
 
