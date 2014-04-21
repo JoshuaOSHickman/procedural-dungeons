@@ -1,10 +1,12 @@
 module Main (main) where 
 
 import Data.Monoid (mconcat, mappend)
-import Graphics.Gloss (Picture(Translate, Line), rectangleWire, display, Display(InWindow), white)
+import Graphics.Gloss (rectangleWire, display, white,
+                       Picture(Translate, Line), Display(InWindow))
+import System.Environment (getArgs)
 
 import Dungeons.Generator (randomRooms, bufferAllRooms, corridors, center, 
-                           Room(..), Location(..)) 
+                           Room(Room), Location(Location))
 
 renderRoom :: Room -> Picture
 renderRoom r@(Room _ width height) = 
@@ -25,9 +27,12 @@ renderCorridorManhattan (room1, room2) = mappend horizontalLine verticalLine
 
 main :: IO ()
 main = do
+  args <- getArgs
   rooms <- randomRooms
   let newRooms = bufferAllRooms 5 rooms
       roomsPic = mconcat (map renderRoom newRooms)
-      corridorsPic = mconcat (map renderCorridorManhattan (corridors newRooms))
+      useManhattan = null args || head args == "manhattan"
+      corridorRendering = if useManhattan then renderCorridorManhattan else renderCorridor
+      corridorsPic = mconcat (map corridorRendering (corridors newRooms))
       picture = mappend roomsPic corridorsPic
   display (InWindow "Rooms" (400, 400) (10, 10)) white picture

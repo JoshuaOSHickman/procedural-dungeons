@@ -17,4 +17,5 @@ cabal-version:       >=1.8
 executable show-dungeon
   main-is: Main.hs
   -- other-modules: 
+  ghc-options: -Wall -Werror
   build-depends:       base ==4.6.*, gloss, random
